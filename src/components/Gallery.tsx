@@ -1,22 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
-const galleryItems = [
-  { id: 1, title: 'Worship Service', category: 'worship' },
-  { id: 2, title: 'Youth Fellowship', category: 'youth' },
-  { id: 3, title: 'Sunday School', category: 'children' },
-  { id: 4, title: 'Church Outreach', category: 'outreach' },
-  { id: 5, title: 'Fellowship Day', category: 'events' },
-  { id: 6, title: 'Bible Study', category: 'worship' },
-  { id: 7, title: 'Music Ministry', category: 'worship' },
-  { id: 8, title: 'Community Service', category: 'outreach' },
-];
+type GalleryItem = {
+  _id: string;
+  title: string;
+  image: string;
+  category: string;
+};
 
 export default function Gallery() {
-  const [selectedImage, setSelectedImage] = useState<number | null>(null);
+  const [items, setItems] = useState<GalleryItem[]>([]);
+  const [selectedImage, setSelectedImage] = useState<GalleryItem | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/gallery')
+      .then((res) => res.json())
+      .then((data) => {
+        setItems(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
   return (
     <section id="gallery" className="py-20 bg-off-white">
@@ -37,31 +45,49 @@ export default function Gallery() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {galleryItems.map((item, index) => (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: index * 0.05 }}
-              whileHover={{ scale: 1.02 }}
-              onClick={() => setSelectedImage(item.id)}
-              className="aspect-square bg-gray-300 rounded-xl overflow-hidden cursor-pointer group relative"
-            >
-              <div className="absolute inset-0 bg-primary/20 group-hover:bg-primary/40 transition-colors flex items-center justify-center">
-                <span className="text-primary/50 font-heading text-sm text-center px-2">
-                  {item.title}
-                </span>
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="bg-gold text-primary px-4 py-2 rounded-full text-sm font-medium">
-                  View
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="aspect-square bg-gray-200 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <p className="text-center text-gray-500">No photos yet</p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {items.map((item, index) => (
+              <motion.div
+                key={item._id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: index * 0.05 }}
+                whileHover={{ scale: 1.02 }}
+                onClick={() => setSelectedImage(item)}
+                className="aspect-square bg-gray-300 rounded-xl overflow-hidden cursor-pointer group relative"
+              >
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                    <span className="text-primary/50 font-heading text-sm text-center px-2">
+                      {item.title}
+                    </span>
+                  </div>
+                )}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                  <div className="bg-gold text-primary px-4 py-2 rounded-full text-sm font-medium">
+                    View
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         <AnimatePresence>
           {selectedImage && (
@@ -69,30 +95,36 @@ export default function Gallery() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+              className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
               onClick={() => setSelectedImage(null)}
             >
               <motion.div
                 initial={{ scale: 0.9 }}
                 animate={{ scale: 1 }}
                 exit={{ scale: 0.9 }}
-                className="bg-white rounded-2xl p-4 max-w-2xl w-full"
+                className="relative max-w-4xl w-full max-h-[90vh]"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-heading text-primary font-semibold">
-                    {galleryItems.find((i) => i.id === selectedImage)?.title}
-                  </h3>
-                  <button
-                    onClick={() => setSelectedImage(null)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-                <div className="aspect-video bg-gray-200 rounded-xl flex items-center justify-center">
-                  <span className="text-gray-400">Image Placeholder</span>
-                </div>
+                <button
+                  onClick={() => setSelectedImage(null)}
+                  className="absolute -top-10 right-0 text-white hover:text-gold transition-colors"
+                >
+                  <X size={32} />
+                </button>
+                {selectedImage.image ? (
+                  <img
+                    src={selectedImage.image}
+                    alt={selectedImage.title}
+                    className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+                  />
+                ) : (
+                  <div className="aspect-video bg-gray-800 rounded-xl flex items-center justify-center">
+                    <span className="text-gray-400">No Image</span>
+                  </div>
+                )}
+                <h3 className="text-white text-center text-xl font-heading mt-4">
+                  {selectedImage.title}
+                </h3>
               </motion.div>
             </motion.div>
           )}
