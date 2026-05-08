@@ -13,13 +13,13 @@ export async function POST(request: Request) {
     console.log('Found admin:', admin ? admin.username : 'none');
     
     if (!admin) {
+      console.log('Admin not found for username:', username);
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
     
     const isValid = await bcrypt.compare(password, admin.password);
-    console.log('Password valid:', isValid);
-    
     if (!isValid) {
+      console.log('Password invalid for username:', username);
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
     
